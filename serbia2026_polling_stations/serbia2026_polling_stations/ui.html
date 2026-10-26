@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Serbia 2026 Polling Stations</title>
+<script src="https://unpkg.com/deck.gl@8.9.35/dist.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
+<style>
+:root{--bg:#ffffff;--panel:#fbfbfa;--ink:#16202b;--muted:#5d6876;--rule:#e2e5e9;--accent:#c2410c;--blue:#1f5f99;--hl:#f97316;--soft:#f1f3f5}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:13px/1.45 "Inter","Segoe UI",system-ui,-apple-system,sans-serif}
+#app{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(400px,1fr);height:100vh;gap:0}
+#mapwrap{position:relative;min-height:0;border-right:1px solid var(--rule)}
+#map{position:absolute;inset:0}
+#panel{display:flex;flex-direction:column;min-height:0;background:var(--panel)}
+@media (max-width:1050px){#app{grid-template-columns:1fr;grid-template-rows:46vh minmax(0,1fr)}#mapwrap{border-right:0;border-bottom:1px solid var(--rule)}}
+.toolbar{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;z-index:5;pointer-events:none}
+.toolbar>*{pointer-events:auto}
+.chip{background:#fff;border:1px solid var(--rule);border-radius:8px;padding:5px 8px;box-shadow:0 1px 3px rgba(0,0,0,.06);display:flex;gap:6px;align-items:center}
+select,input[type=text]{font:inherit;border:1px solid var(--rule);border-radius:6px;padding:4px 6px;background:#fff;color:var(--ink);max-width:260px}
+.seg{display:flex;border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:4px 9px;font:inherit;cursor:pointer;color:var(--muted)}
+.seg button.on{background:var(--ink);color:#fff}
+#legend{position:absolute;left:10px;bottom:10px;z-index:5;background:#fff;border:1px solid var(--rule);border-radius:8px;padding:6px 9px;min-width:190px;font-size:12px}
+#legend .bar{height:9px;border-radius:3px;margin:4px 0}
+#legend .lab{display:flex;justify-content:space-between;color:var(--muted)}
+#card{position:absolute;right:10px;bottom:10px;z-index:6;background:#fff;border:1px solid var(--rule);border-radius:10px;padding:10px 12px;width:300px;max-width:calc(100% - 20px);box-shadow:0 4px 14px rgba(0,0,0,.08);display:none;font-size:12.5px}
+#card h4{margin:0 0 4px;font-size:13.5px}
+#card .x{position:absolute;top:6px;right:9px;cursor:pointer;color:var(--muted)}
+#card table{width:100%;border-collapse:collapse;margin-top:4px}
+#card td{padding:2px 0;border-bottom:1px solid var(--soft)}
+#card td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.banner{background:#fee2e2;color:#991b1b;font-weight:600;padding:4px 10px;border-radius:6px}
+.tabs{display:flex;gap:2px;padding:8px 12px 0;border-bottom:1px solid var(--rule);flex-wrap:wrap;background:#fff}
+.tabs button{border:0;background:none;padding:8px 10px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--accent)}
+#content{overflow:auto;padding:12px 16px 30px;min-height:0;flex:1}
+h2{font-size:17px;margin:4px 0 8px}
+h3{font-size:14px;margin:22px 0 6px;padding-top:12px;border-top:1px solid var(--rule)}
+p{margin:6px 0}
+.note{background:#eef4fb;border:1px solid #d6e4f3;border-radius:8px;padding:8px 10px;color:#22476b}
+.cap{color:var(--muted);font-size:11.5px;margin-top:4px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:8px 0}
+.kpi{background:#fff;border:1px solid var(--rule);border-radius:8px;padding:7px 9px}
+.kpi b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
+.kpi span{color:var(--muted);font-size:11.5px}
+.tbl{width:100%;border-collapse:collapse;font-size:12px;background:#fff}
+.tblwrap{max-height:300px;overflow:auto;border:1px solid var(--rule);border-radius:8px}
+.tbl th{position:sticky;top:0;background:#f6f7f8;text-align:left;font-weight:600;padding:5px 7px;border-bottom:1px solid var(--rule);white-space:nowrap;cursor:pointer}
+.tbl td{padding:4px 7px;border-bottom:1px solid var(--soft);vertical-align:top}
+.tbl td.n,.tbl th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tbl tr.row:hover{background:#fff4ec;cursor:pointer}
+.tbl tr.grp td{background:#f6f7f8;font-weight:600}
+.chart{width:100%;height:260px}
+.row2{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0}
+a{color:var(--blue)}
+#methodsLink{color:var(--muted);font-size:11px;text-decoration:underline;cursor:pointer;margin-top:30px;display:inline-block}
+#modal{position:fixed;inset:0;background:rgba(15,20,26,.45);display:none;z-index:50;align-items:center;justify-content:center}
+#modal .box{background:#fff;max-width:760px;width:92%;max-height:86vh;overflow:auto;border-radius:12px;padding:18px 22px;font-size:13px}
+#modal h3{border:0;margin-top:14px}
+.pill{display:inline-block;padding:1px 7px;border-radius:10px;background:var(--soft);color:var(--muted);font-size:11px}
+.muted{color:var(--muted)}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="mapwrap">
+    <div id="map"></div>
+    <div class="toolbar" id="toolbar"></div>
+    <div id="legend"></div>
+    <div style="position:absolute;right:6px;bottom:2px;z-index:4;font-size:10px;color:#777;background:rgba(255,255,255,.7);padding:0 4px">Basemap © Esri, HERE, Garmin, © OpenStreetMap contributors</div>
+    <div id="card"><span class="x" onclick="closeCard()">✕</span><div id="cardBody"></div></div>
+  </div>
+  <div id="panel">
+    <div class="tabs" id="tabs"></div>
+    <div id="content"></div>
+  </div>
+</div>
+<div id="modal" onclick="if(event.target.id==='modal')this.style.display='none'"><div class="box" id="modalBox"></div></div>
+<script>
+const D = __DATA__;
+const METHODS = __METHODS__;
+const S = D.stations, N = S.id.length, L = D.lists;
+const fmt = x => (x==null||isNaN(x)) ? "n/a" : Math.round(x).toLocaleString("en-US");
+const pct = (x,d=1) => (x==null||isNaN(x)) ? "n/a" : (100*x).toFixed(d)+"%";
+const sgn = (x,d=1,u="") => (x==null||isNaN(x)) ? "n/a" : (x>0?"+":x<0?"−":"")+(d===0?Math.abs(Math.round(x)).toLocaleString("en-US"):Math.abs(x).toFixed(d))+u;
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const KIND = {domestic:"Serbia", kosovo:"Kosovo and Metohija", abroad:"Abroad", prison:"Prisons"};
+const PREC = {building:"building", street:"street", settlement:"settlement", approx:"approximate", municipality:"municipality centre", city:"city centre"};
+
+// ------------------------------------------------------------ derived per-station values
+const VB = new Array(N), T = new Array(N), SH = L.map(()=>new Array(N)), CH23 = new Array(N), TCH = new Array(N);
+for (let i=0;i<N;i++){
+  T[i] = S.voted[i]!=null && S.reg[i]>0 ? S.voted[i]/S.reg[i] : null;
+  const base = S.valid[i]!=null ? S.valid[i] : (L.length? L.reduce((a,_,k)=>a+(S.votes[k][i]||0),0):null);
+  VB[i] = (S.voted[i]!=null && base>0) ? base : null;
+  L.forEach((_,k)=>{ SH[k][i] = (S.votes[k][i]!=null && base>0) ? S.votes[k][i]/base : null; });
+  CH23[i] = S.reg23[i] ? S.reg[i]/S.reg23[i]-1 : null;
+  TCH[i] = (T[i]!=null && S.t23[i]!=null) ? (T[i]-S.t23[i])*100 : null;
+}
+const idxByLsg = {}; for (let i=0;i<N;i++){ if(S.lsg[i]) (idxByLsg[S.lsg[i]] ||= []).push(i); }
+const idxByUnit = {}; for (let i=0;i<N;i++){ (idxByUnit[S.unit[i]] ||= []).push(i); }
+const idIndex = {}; S.id.forEach((x,i)=>idIndex[x]=i);
+const state = {tab:"forensics", view:"serbia", metric: D.has_results ? "turnout" : "reg", level:"stations", party:0,
+               hl:new Set(), hlLsg:new Set(), hlKos:null, sel:null, ext: D.has_results ? "turnout" : "reg",
+               scope:{domestic:true,kosovo:true,abroad:true,prison:true}};
+
+// ------------------------------------------------------------ colours
+const SEQ=[[239,243,255],[189,215,238],[107,174,214],[33,113,181],[8,48,107]];
+const DIV=[[179,88,6],[241,163,64],[238,238,238],[153,142,195],[84,39,136]];
+function ramp(v,lo,hi,stops){ if(v==null||isNaN(v)) return [200,200,200,120]; let x=Math.max(0,Math.min(1,(v-lo)/((hi-lo)||1)));
+  const p=x*(stops.length-1), i=Math.min(Math.floor(p),stops.length-2), f=p-i; return stops[i].map((c,j)=>Math.round(c+(stops[i+1][j]-c)*f)); }
+function quant(arr,q){ const a=arr.filter(v=>v!=null&&!isNaN(v)).sort((x,y)=>x-y); if(!a.length) return 0; return a[Math.min(a.length-1,Math.floor(q*(a.length-1)))]; }
+const css = c => `rgb(${c[0]},${c[1]},${c[2]})`;
+
+// ------------------------------------------------------------ metrics
+function metricDefs(){
+  const m = [{k:"reg", label:"Registered voters (RIK, 23 Oct)", st:i=>S.reg[i], pal:SEQ, f:fmt}];
+  m.push({k:"chg_oct", label:"Change 9 → 23 Oct (voters)", st:i=>S.reg[i]-S.reg_a1[i], pal:DIV, f:x=>sgn(x,0), range:[-3,3],
+          agg:ids=>ids.reduce((a,i)=>a+S.reg[i]-S.reg_a1[i],0), aggRange:[-30,30]});
+  if (D.units23) m.push({k:"ch23", label:"Register change vs. 2023", st:i=>CH23[i], pal:DIV, f:x=>sgn(x*100,1,"%"), range:[-.15,.15], lsgFrom:"u23reg"});
+  if (D.units23) m.push({k:"t23", label:"Turnout 2023", st:i=>S.t23[i], pal:SEQ, f:pct, lsgFrom:"u23t"});
+  if (D.has_results){
+    m.push({k:"turnout", label:"Turnout", st:i=>T[i], pal:SEQ, f:pct, agg:ids=>{let v=0,r=0;ids.forEach(i=>{if(S.voted[i]!=null){v+=S.voted[i];r+=S.reg[i];}});return r?v/r:null;}});
+    L.forEach((n,k)=>m.push({k:"sh"+k, label:"Share: "+n, st:i=>SH[k][i], pal:SEQ, f:pct,
+      zero:true, agg:ids=>{let v=0,b=0;ids.forEach(i=>{if(VB[i]!=null){v+=S.votes[k][i]||0;b+=VB[i];}});return b?v/b:null;}}));
+    m.push({k:"nz", label:"Turnout vs. 8 nearest stations", st:i=>S.nz[i], pal:DIV, f:x=>sgn(x,1," SD"), range:[-4,4], stationsOnly:true});
+    if (D.units23) m.push({k:"tch", label:"Turnout change vs. 2023 (points)", st:i=>TCH[i], pal:DIV, f:x=>sgn(x,1," pp"), range:[-15,15],
+      agg:ids=>{let v=0,r=0,v3=0,r3=0;ids.forEach(i=>{if(S.voted[i]!=null&&S.t23[i]!=null){v+=S.voted[i];r+=S.reg[i];v3+=S.t23[i]*S.reg23[i];r3+=S.reg23[i];}});return r&&r3?(v/r-v3/r3)*100:null;}});
+  }
+  m.push({k:"gap", label:"Register gap (earlier analysis)", pal:SEQ, f:x=>pct(x), range:[-.05,.30], lsgOnly:true});
+  const first=["turnout"].concat(L.map((_,k)=>"sh"+k)).concat(["nz","tch"]);
+  return [...m.filter(x=>first.includes(x.k)).sort((a,b)=>first.indexOf(a.k)-first.indexOf(b.k)), ...m.filter(x=>!first.includes(x.k))];
+}
+let METRICS = metricDefs();
+const TOP3 = L.map((_,k)=>[k,S.votes[k].reduce((a,v)=>a+(v||0),0)]).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]);
+function shareOf(k, ids){ let v=0,b=0; ids.forEach(i=>{ if(VB[i]!=null){ v+=S.votes[k][i]||0; b+=VB[i]; } }); return b? v/b : null; }
+const EXT_OPTS = () => METRICS.filter(m=>m.k==="reg"||m.k==="turnout"||m.k.startsWith("sh"));
+const EXT = () => EXT_OPTS().find(m=>m.k===state.ext) || EXT_OPTS()[0];
+function extVal(ids){ const m=EXT(); if(m.k==="reg") return ids.reduce((a,i)=>a+S.reg[i],0); return m.agg(ids); }
+const M = () => METRICS.find(m=>m.k===state.metric) || METRICS[0];
+const u23ByLsg = {}; (D.units23||[]).forEach(u=>{ if(u.kind==="domestic"&&u.lsg){ const o=(u23ByLsg[u.lsg] ||= {reg23:0,v23:0,reg26:0}); o.reg23+=u.reg23||0; o.v23+=u.v23||0; o.reg26+=u.reg26||0; }});
+const gapByLsg = {}; D.gap.forEach(g=>gapByLsg[g.lsg]=g);
+function lsgValue(m,name){
+  if (m.k==="gap") return gapByLsg[name]?.unexplained_gap_rel ?? null;
+  if (m.k==="ch23"){ const o=u23ByLsg[name]; return o&&o.reg23 ? o.reg26/o.reg23-1 : null; }
+  if (m.k==="t23"){ const o=u23ByLsg[name]; return o&&o.reg23 ? o.v23/o.reg23 : null; }
+  const ids=(idxByLsg[name]||[]).filter(i=>S.kind[i]==="domestic");
+  if (m.agg) return m.agg(ids);
+  if (m.k==="reg") return ids.reduce((a,i)=>a+S.reg[i],0);
+  return null;
+}
+
+// ------------------------------------------------------------ map
+const TILE = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}";
+const VIEWS = {serbia:{longitude:20.85,latitude:44.15,zoom:6.35}, kosovo:{longitude:20.95,latitude:42.8,zoom:7.6}, abroad:{longitude:14,latitude:46,zoom:3.1}};
+const deckgl = new deck.Deck({parent:document.getElementById("map"), initialViewState:{...VIEWS.serbia, pitch:0, bearing:0},
+  controller:{doubleClickZoom:true}, getTooltip:tooltip, layers:[], onClick:info=>{ if(!info.object) closeCard(); },
+  getCursor:({isHovering})=>isHovering?"pointer":"grab"});
+function fly(v){ deckgl.setProps({initialViewState:{...v, pitch:0, bearing:0, transitionDuration:700, transitionInterpolator:new deck.FlyToInterpolator()}}); }
+const baseLayer = new deck.TileLayer({id:"tiles", data:TILE, minZoom:0, maxZoom:16, tileSize:256,
+  renderSubLayers:p=>{ const {west,south,east,north}=p.tile.bbox; return new deck.BitmapLayer(p,{data:null,image:p.data,bounds:[west,south,east,north]}); }});
+
+let stationIdx = [];
+function visibleStations(){
+  if (state.view==="abroad") return [];
+  const out=[]; for(let i=0;i<N;i++){ if(S.lat[i]==null) continue; if(S.kind[i]==="abroad") continue; if(!state.scope[S.kind[i]]) continue; out.push(i);} return out;
+}
+function range(m, vals){ return m.range || (m.zero ? [0, Math.max(quant(vals,.95),0.005)] : [quant(vals,.05), quant(vals,.95)]); }
+
+function layers(){
+  const m = M(), ls=[baseLayer];
+  if (state.view==="serbia"){
+    const level = m.lsgOnly ? "lsg" : (m.stationsOnly ? "stations" : state.level);
+    // Kosovo outline (context)
+    ls.push(new deck.GeoJsonLayer({id:"kos", data:D.kos_outline, filled:true, getFillColor:[210,210,205,90], getLineColor:[150,150,150], lineWidthMinPixels:1}));
+    if (level==="lsg"){
+      const vals={}; D.lsg_geo.features.forEach(f=>vals[f.properties.name]=lsgValue(m,f.properties.name));
+      const [lo,hi]= m.k==="chg_oct" ? m.aggRange : range(m,Object.values(vals));
+      legend(m.label + " · municipalities", lo, hi, m.pal, m.f);
+      ls.push(new deck.GeoJsonLayer({id:"lsg-"+m.k, data:D.lsg_geo, pickable:true, filled:true, stroked:true,
+        getFillColor:f=>[...ramp(vals[f.properties.name],lo,hi,m.pal),200], getLineColor:[255,255,255], lineWidthMinPixels:.6,
+        updateTriggers:{getFillColor:[m.k,state.party]}, onHover:i=>{}, onClick:i=>{ if(i.object) showLsgCard(i.object.properties.name, vals); }}));
+    } else {
+      ls.push(new deck.GeoJsonLayer({id:"lsg-lines", data:D.lsg_geo, filled:false, stroked:true, getLineColor:[150,150,150,160], lineWidthMinPixels:.5}));
+      stationIdx = visibleStations();
+      const vals = stationIdx.map(m.st); const [lo,hi]=range(m,vals);
+      legend(m.label + " · polling stations", lo, hi, m.pal, m.f);
+      ls.push(new deck.ScatterplotLayer({id:"st-"+m.k, data:stationIdx, pickable:true, opacity:.85, stroked:false,
+        getPosition:i=>[S.lon[i],S.lat[i]], getRadius:i=>Math.sqrt(S.reg[i])*9, radiusMinPixels:1.6, radiusMaxPixels:13,
+        getFillColor:i=>ramp(m.st(i),lo,hi,m.pal), updateTriggers:{getFillColor:[m.k,JSON.stringify(state.scope)]},
+        onClick:i=>{ if(i.object!=null) showCard(i.object); }}));
+    }
+    if (state.hlLsg.size) ls.push(new deck.GeoJsonLayer({id:"hl-lsg", data:{type:"FeatureCollection",features:D.lsg_geo.features.filter(f=>state.hlLsg.has(f.properties.name))},
+      filled:true, getFillColor:[249,115,22,40], getLineColor:[249,115,22], lineWidthMinPixels:2.5}));
+  }
+  if (state.view==="kosovo") ls.push(...kosovoLayers());
+  if (state.view==="abroad") ls.push(...abroadLayers());
+  const hl=[...state.hl].filter(i=>S.lat[i]!=null);
+  if (state.sel!=null) hl.push(state.sel);
+  if (hl.length) ls.push(new deck.ScatterplotLayer({id:"hl", data:hl, getPosition:i=>[S.lon[i],S.lat[i]], filled:false, stroked:true,
+    getLineColor:i=>i===state.sel?[22,32,43]:[249,115,22], lineWidthMinPixels:2.2, getRadius:8, radiusUnits:"pixels",
+    updateTriggers:{getLineColor:state.sel}}));
+  return ls;
+}
+function render(){ deckgl.setProps({layers:layers()}); }
+let hlTimer=null;
+function setHL(ids, lsgs){ state.hl=new Set(ids||[]); state.hlLsg=new Set(lsgs||[]); clearTimeout(hlTimer); hlTimer=setTimeout(render,15); }
+function clearHL(){ setHL([],[]); }
+
+function tooltip({object, layer}){
+  if (object==null || !layer) return null;
+  const st={className:"tt", style:{background:"#fff",color:"#16202b",border:"1px solid #e2e5e9",borderRadius:"8px",fontSize:"12px",padding:"7px 9px",boxShadow:"0 3px 10px rgba(0,0,0,.08)",maxWidth:"300px"}};
+  if (typeof object==="number"){ const i=object, m=M();
+    return {...st, html:`<b>${esc(S.unit[i])} · PS ${S.no[i]}</b><br>${esc(S.name[i])}<br><span style="color:#5d6876">${esc(S.addr[i])}</span><br>Registered: <b>${fmt(S.reg[i])}</b>`+
+      (T[i]!=null?`<br>Turnout: <b>${pct(T[i])}</b>`:"")+(m.st&&!["reg","turnout"].includes(m.k)?`<br>${esc(m.label)}: <b>${m.f(m.st(i))}</b>`:"")}; }
+  if (object.properties && layer.id.startsWith("lsg-")){ const n=object.properties.name, m=M();
+    return {...st, html:`<b>${esc(n)}</b><br>${esc(m.label)}: <b>${m.f(lsgValue(m,n))}</b><br>${(idxByLsg[n]||[]).filter(i=>S.voted[i]!=null).length} of ${(idxByLsg[n]||[]).length} polling stations processed`}; }
+  if (layer.id==="kos-mun"){ const p=object.properties, r=kosStats[p.name];
+    return {...st, html:`<b>${esc(p.name)}</b><br>`+(r?`Registered: <b>${fmt(r.reg)}</b> at ${r.n} station(s)<br>Votes in: <b>${esc([...r.hosts].join(", "))}</b>`+(r.voted?`<br>Turnout: <b>${pct(r.voted/r.reg)}</b>`:"")+(EXT().k.startsWith("sh")?`<br>${esc(EXT().label)}: <b>${EXT().f(extVal(r.ids))}</b>`:""):(p.not_in_serbian_system?"Not a municipality in Serbia's system":"No voters in the register"))}; }
+  if (layer.id==="kos-host"||layer.id==="kos-arcs") return {...st, html:`<b>${esc(object.host||object.name)}</b><br>${fmt(object.reg)} registered voters` + (object.units?`<br>${esc(object.units)}`:"")};
+  if (layer.id==="ab-city") return {...st, html:`<b>${esc(object.city)}</b>, ${esc(object.country)}<br>${object.ids.length} station(s), ${fmt(object.reg)} registered`+(object.voted?`<br>Turnout: <b>${pct(object.voted/object.reg)}</b>`:"")+(EXT().k.startsWith("sh")?`<br>${esc(EXT().label)}: <b>${EXT().f(extVal(object.ids))}</b>`:"")};
+  return null;
+}
+function legend(title, lo, hi, pal, f){
+  const g = pal.map((c,i)=>`${css(c)} ${i/(pal.length-1)*100}%`).join(",");
+  document.getElementById("legend").innerHTML = `<div><b>${esc(title)}</b></div><div class="bar" style="background:linear-gradient(90deg,${g})"></div><div class="lab"><span>${f(lo)}</span><span>${f(hi)}</span></div>`;
+}
+
+// ------------------------------------------------------------ station card
+function showCard(i){
+  state.sel=i; render();
+  const rows=[["Registered (RIK 23 Oct)",fmt(S.reg[i])],["Registered (closed register 9 Oct)",fmt(S.reg_a1[i])]];
+  if(S.reg23[i]!=null) rows.push(["Registered 2023",fmt(S.reg23[i])]);
+  if(T[i]!=null){ rows.push(["Voted",fmt(S.voted[i])],["Turnout",pct(T[i])]); }
+  if(S.t23[i]!=null) rows.push(["Turnout 2023",pct(S.t23[i])]);
+  if(S.nz[i]!=null) rows.push(["Median turnout of 8 nearest",pct(S.nmed[i])],["Deviation from neighbours",sgn(S.nz[i],1," SD")]);
+  L.forEach((n,k)=>{ if(SH[k][i]!=null) rows.push([n, pct(SH[k][i])]); });
+  rows.push(["Location precision", PREC[S.prec[i]]||S.prec[i]]);
+  document.getElementById("cardBody").innerHTML = `<h4>${esc(S.unit[i])} · polling station ${S.no[i]}</h4><div>${esc(S.name[i])}</div><div class="muted">${esc(S.addr[i])}</div>`+
+    `<table>${rows.map(r=>`<tr><td>${esc(r[0])}</td><td>${r[1]}</td></tr>`).join("")}</table>`+
+    `<div style="margin-top:5px">`+(S.min26[i]?`<a href="${esc(S.min26[i])}" target="_blank">2026 minutes (RIK PDF)</a>`:"")+(S.min26[i]&&S.min23[i]?" · ":"")+(S.min23[i]?`<a href="${esc(S.min23[i])}" target="_blank">2023 minutes</a>`:"")+`</div>`;
+  document.getElementById("card").style.display="block";
+}
+function showLsgCard(n, vals){
+  const ids=(idxByLsg[n]||[]); const reg=ids.reduce((a,i)=>a+S.reg[i],0);
+  document.getElementById("cardBody").innerHTML=`<h4>${esc(n)}</h4><table><tr><td>Polling stations</td><td>${ids.length}</td></tr><tr><td>Registered</td><td>${fmt(reg)}</td></tr><tr><td>${esc(M().label)}</td><td>${M().f(vals[n])}</td></tr></table>`;
+  document.getElementById("card").style.display="block";
+}
+function closeCard(){ document.getElementById("card").style.display="none"; state.sel=null; render(); }
+function goTo(i, z=12.5){ if(S.lat[i]==null) return; if(S.kind[i]==="abroad"&&state.view!=="abroad") setTab("abroad");
+  else if(S.kind[i]!=="abroad"&&state.view!=="serbia") { state.view="serbia"; toolbar(); }
+  fly({longitude:S.lon[i],latitude:S.lat[i],zoom:z}); showCard(i); }
+
+// ------------------------------------------------------------ toolbar
+function toolbar(){
+  const tb=document.getElementById("toolbar"); let h="";
+  if (D.has_results){ const nr=S.voted.filter(v=>v!=null).length; h+=`<span class="chip" title="${esc(D.files.map(f=>f.file).join(", "))}">Results: <b>${fmt(nr)}</b>&nbsp;of ${fmt(N)} stations processed</span>`; }
+  if (state.view==="serbia"){
+    const m=M();
+    h+=`<span class="chip"><select id="mSel">${METRICS.map(x=>`<option value="${x.k}" ${x.k===state.metric?"selected":""}>${esc(x.label)}</option>`).join("")}</select></span>`;
+    h+=`<span class="chip"><span class="seg"><button data-l="stations" class="${state.level==="stations"&&!m.lsgOnly||m.stationsOnly?"on":""}" ${m.lsgOnly?"disabled":""}>Stations</button><button data-l="lsg" class="${state.level==="lsg"&&!m.stationsOnly||m.lsgOnly?"on":""}" ${m.stationsOnly?"disabled":""}>Municipalities</button></span></span>`;
+  }
+  if (state.view!=="serbia") h+=`<span class="chip"><select id="eSel">${EXT_OPTS().map(x=>`<option value="${x.k}" ${x.k===EXT().k?"selected":""}>${esc(x.label)}</option>`).join("")}</select></span>`;
+  h+=`<span class="chip"><span class="seg">${["serbia","kosovo","abroad"].map(v=>`<button data-v="${v}" class="${state.view===v?"on":""}">${{serbia:"Serbia",kosovo:"Kosovo",abroad:"World"}[v]}</button>`).join("")}</span></span>`;
+  tb.innerHTML=h;
+  const es=document.getElementById("eSel"); if(es) es.onchange=e=>{ state.ext=e.target.value; render(); if(state.tab==="kosovo"||state.tab==="abroad") setTab(state.tab); };
+  const ms=document.getElementById("mSel"); if(ms) ms.onchange=e=>{ state.metric=e.target.value; toolbar(); render(); };
+  tb.querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>{ state.level=b.dataset.l; toolbar(); render(); });
+  tb.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{ setView(b.dataset.v); });
+  document.getElementById("legend").style.display = state.view==="serbia"||state.view==="kosovo"||state.view==="abroad" ? "block":"none";
+}
+function setView(v){ state.view=v; fly(VIEWS[v]); toolbar(); render(); }
+
+// ------------------------------------------------------------ Kosovo layers
+const kosStats = {}; for(let i=0;i<N;i++) if(S.kind[i]==="kosovo"){ const o=(kosStats[S.unit[i]] ||= {reg:0,n:0,voted:0,hosts:new Set(),ids:[]}); o.reg+=S.reg[i]; o.n++; o.ids.push(i); o.hosts.add(S.host[i]); if(S.voted[i]!=null)o.voted+=S.voted[i]; }
+const hostPos = {}; for(let i=0;i<N;i++) if(S.kind[i]==="kosovo"&&S.lat[i]!=null){ const h=(hostPos[S.host[i]] ||= {name:S.host[i],lat:0,lon:0,k:0,reg:0,units:new Set()}); h.lat+=S.lat[i];h.lon+=S.lon[i];h.k++;h.reg+=S.reg[i];h.units.add(S.unit[i]); }
+Object.values(hostPos).forEach(h=>{h.lat/=h.k;h.lon/=h.k;h.units=[...h.units].join(", ");});
+function centroid(f){ let best=null,ba=0; for(const poly of f.geometry.coordinates){ const r=poly[0]; let a=0,cx=0,cy=0; for(let j=0;j<r.length-1;j++){const c=r[j][0]*r[j+1][1]-r[j+1][0]*r[j][1];a+=c;cx+=(r[j][0]+r[j+1][0])*c;cy+=(r[j][1]+r[j+1][1])*c;} if(Math.abs(a)>ba){ba=Math.abs(a);best=[cx/(3*a),cy/(3*a)];} } return best; }
+const kosCent = {}; D.kos_geo.features.forEach(f=>kosCent[f.properties.name]=centroid(f));
+function kosovoLayers(){
+  const em = EXT(), useT = em.k!=="reg";
+  const val = n => { const r=kosStats[n]; return r ? extVal(r.ids) : null; };
+  const vs = Object.keys(kosStats).map(val); const [lo,hi] = useT ? (em.zero?[0,Math.max(...vs.filter(v=>v!=null),.005)]:[Math.min(...vs.filter(v=>v!=null)),Math.max(...vs.filter(v=>v!=null))]) : [0,Math.max(...vs)];
+  legend(em.label+" · Kosovo and Metohija units", lo, hi, SEQ, em.f);
+  const arcs=[]; for(const [u,r] of Object.entries(kosStats)) for(const h of r.hosts){ const reg=r.ids.filter(i=>S.host[i]===h).reduce((a,i)=>a+S.reg[i],0); if(kosCent[u]&&hostPos[h]) arcs.push({unit:u,host:h,reg,from:kosCent[u],to:[hostPos[h].lon,hostPos[h].lat],name:`${u} → ${h}`}); }
+  const labels = D.kos_geo.features.map(f=>({n:f.properties.name, p:kosCent[f.properties.name], v:val(f.properties.name)}));
+  return [
+    new deck.GeoJsonLayer({id:"lsg-lines-k", data:D.lsg_geo, filled:false, getLineColor:[170,170,170,150], lineWidthMinPixels:.5}),
+    new deck.GeoJsonLayer({id:"kos-mun", data:D.kos_geo, pickable:true, filled:true, stroked:true,
+      getFillColor:f=>{ const v=val(f.properties.name); return v==null?[255,255,255,230]:[...ramp(v,lo,hi,SEQ),235]; },
+      getLineColor:f=>state.hlKos===f.properties.name?[249,115,22]:[255,255,255], getLineWidth:f=>state.hlKos===f.properties.name?3:1, lineWidthUnits:"pixels",
+      updateTriggers:{getFillColor:[state.ext],getLineColor:state.hlKos,getLineWidth:state.hlKos},
+      onHover:i=>{ const n=i.object?.properties?.name||null; if(n!==state.hlKos){state.hlKos=n; render(); markKosRow(n);} }}),
+    new deck.ArcLayer({id:"kos-arcs", data:arcs, pickable:true, getSourcePosition:d=>d.from, getTargetPosition:d=>d.to,
+      getWidth:d=>Math.max(1,Math.sqrt(d.reg)/24), getSourceColor:d=>state.hlKos&&state.hlKos!==d.unit?[180,180,180,50]:[31,95,153,150],
+      getTargetColor:d=>state.hlKos&&state.hlKos!==d.unit?[180,180,180,50]:[194,65,12,170], getHeight:.35, greatCircle:false, updateTriggers:{getSourceColor:state.hlKos,getTargetColor:state.hlKos}}),
+    new deck.ScatterplotLayer({id:"kos-host", data:Object.values(hostPos), pickable:true, getPosition:d=>[d.lon,d.lat], getRadius:7, radiusUnits:"pixels",
+      getFillColor:[194,65,12], stroked:true, getLineColor:[255,255,255], lineWidthMinPixels:2}),
+    new deck.TextLayer({id:"kos-host-l", data:Object.values(hostPos), getPosition:d=>[d.lon,d.lat], getText:d=>`${d.name}\n${fmt(d.reg)}`, getSize:13, getPixelOffset:[0,-22],
+      fontWeight:700, getColor:[150,50,10], fontSettings:{sdf:false, fontSize:96, buffer:6}, characterSet:"auto", fontFamily:"Segoe UI, Helvetica Neue, Arial, sans-serif", background:true, backgroundPadding:[3,1,3,1], getBackgroundColor:[255,255,255,215]}),
+    new deck.TextLayer({id:"kos-lab", data:labels.filter(d=>d.p), getPosition:d=>d.p, getText:d=>d.v==null?d.n:`${d.n}\n${em.f(d.v)}`, getSize:10.5, fontWeight:600,
+      getColor:d=>d.v==null?[110,110,110]:[16,32,43], fontSettings:{sdf:false, fontSize:96, buffer:6}, characterSet:"auto", fontFamily:"Segoe UI, Helvetica Neue, Arial, sans-serif", background:true, backgroundPadding:[3,1,3,1], getBackgroundColor:[255,255,255,215], updateTriggers:{getText:[state.ext]}})
+  ];
+}
+
+// ------------------------------------------------------------ Abroad layers
+const cities = {}; for(let i=0;i<N;i++) if(S.kind[i]==="abroad"){ const c=(cities[S.city[i]] ||= {city:S.city[i],country:S.country[i],lat:S.lat[i],lon:S.lon[i],ids:[],reg:0,voted:0,reg23:0}); c.ids.push(i); c.reg+=S.reg[i]; if(S.voted[i]!=null)c.voted+=S.voted[i]; }
+const EU = d => d.lat>35 && d.lat<62 && d.lon>-10 && d.lon<30;
+function abroadLayers(){
+  const C=Object.values(cities), em=EXT(), cv={}; C.forEach(c=>cv[c.city]=extVal(c.ids));
+  const vs=Object.values(cv), [lo,hi]= em.k==="reg" ? [0,quant(vs,.95)] : range(em,vs);
+  legend(em.label+" · by city", lo, hi, SEQ, em.f);
+  const sel = state.hl.size ? new Set([...state.hl].map(i=>S.city[i])) : null;
+  return [
+    new deck.ScatterplotLayer({id:"ab-city", data:C, pickable:true, getPosition:d=>[d.lon,d.lat],
+      getRadius:d=>d.reg>4000?11:d.reg>1500?8.5:6.5, radiusUnits:"pixels", stroked:true, getLineColor:d=>sel&&sel.has(d.city)?[249,115,22]:[255,255,255],
+      getLineWidth:d=>sel&&sel.has(d.city)?3:1.5, lineWidthUnits:"pixels", getFillColor:d=>ramp(cv[d.city],lo,hi,SEQ),
+      updateTriggers:{getFillColor:state.ext, getLineColor:[...(sel||[])].join(), getLineWidth:[...(sel||[])].join()}, onClick:i=>{ if(i.object){ const id=i.object.ids[0]; showCard(id); markAbroad(i.object.city);} }}),
+    new deck.TextLayer({id:"ab-lab", data:C.filter(d=>d.reg>=1500 || !EU(d)), getPosition:d=>[d.lon,d.lat], getText:d=>`${d.city} ${fmt(d.reg)}`, getSize:11, getPixelOffset:[12,0],
+      getTextAnchor:"start", getAlignmentBaseline:"center", getColor:[16,32,43], fontSettings:{sdf:false, fontSize:96, buffer:6}, characterSet:"auto", fontFamily:"Segoe UI, Helvetica Neue, Arial, sans-serif", background:true, backgroundPadding:[3,1,3,1], getBackgroundColor:[255,255,255,215],
+      updateTriggers:{getText:[state.view]}})
+  ];
+}
+
+// ------------------------------------------------------------ helpers for panel
+function inScope(i){ return state.scope[S.kind[i]]; }
+function table(cols, rows, opts={}){
+  // cols: [label, fn(row)->html, numeric?]; rows: array; opts.ids(row)->station ids; opts.lsg(row)->lsg names; opts.go(row)->station index
+  const id="t"+Math.random().toString(36).slice(2,8);
+  setTimeout(()=>{ const el=document.getElementById(id); if(!el) return;
+    el.querySelectorAll("tr.row").forEach(tr=>{ const r=rows[+tr.dataset.r];
+      tr.onmouseenter=()=>setHL(opts.ids?opts.ids(r):[], opts.lsg?opts.lsg(r):[]);
+      tr.onmouseleave=()=>clearHL();
+      tr.onclick=()=>{ if(opts.click) opts.click(r); else if(opts.go) goTo(opts.go(r)); }; });
+    el.querySelectorAll("th").forEach((th,c)=>th.onclick=()=>{ const k=cols[c][3]; if(!k) return; const dir=th.dataset.d==="1"?-1:1; rows.sort((a,b)=>((k(a)??-1e9)>(k(b)??-1e9)?1:-1)*dir); th.dataset.d=dir===1?"1":"0"; el.querySelector("tbody").innerHTML=body(); el.querySelectorAll("tr.row").forEach(tr=>{const r=rows[+tr.dataset.r];tr.onmouseenter=()=>setHL(opts.ids?opts.ids(r):[],opts.lsg?opts.lsg(r):[]);tr.onmouseleave=()=>clearHL();tr.onclick=()=>{if(opts.click)opts.click(r);else if(opts.go)goTo(opts.go(r));};}); });
+  },0);
+  const body=()=>rows.map((r,k)=>`<tr class="row" data-r="${k}">${cols.map(c=>`<td class="${c[2]?"n":""}">${c[1](r)}</td>`).join("")}</tr>`).join("");
+  return `<div class="tblwrap" style="max-height:${opts.h||300}px"><table class="tbl" id="${id}"><thead><tr>${cols.map(c=>`<th class="${c[2]?"n":""}" title="${c[3]?"Sort":""}">${c[0]}</th>`).join("")}</tr></thead><tbody>${body()}</tbody></table></div>`;
+}
+const PL = {displayModeBar:false, responsive:true};
+const LAY = (x,y,extra={}) => ({margin:{l:48,r:10,t:8,b:40}, xaxis:{title:{text:x,font:{size:11}},gridcolor:"#eef0f2",zeroline:false}, yaxis:{title:{text:y,font:{size:11}},gridcolor:"#eef0f2",zeroline:false},
+  paper_bgcolor:"rgba(0,0,0,0)", plot_bgcolor:"#fff", font:{family:"Inter,Segoe UI,sans-serif",size:11,color:"#16202b"}, hovermode:"closest", showlegend:false, ...extra});
+function bindHover(div, fn){ div.on("plotly_hover", e=>{ const r=fn(e.points[0]); if(r) setHL(r.ids||[], r.lsg||[]); }); div.on("plotly_unhover", clearHL);
+  div.on("plotly_click", e=>{ const r=fn(e.points[0]); if(r&&r.ids&&r.ids.length===1) goTo(r.ids[0]); }); }
+const src = (...k) => `<div class="cap">Source: ${k.map(x=>esc(D.sources[x])).join("; ")}.</div>`;
+const NOTE = `<div class="note">Statistical indicators describe patterns in the published numbers. An unusual value is a reason to look at the polling-station records (<i>zapisnici</i>) and observer reports. It is not in itself evidence of an irregularity; many unusual values have ordinary explanations (small stations, special institutions, local events, data-entry errors).</div>`;
+
+// ------------------------------------------------------------ tabs
+const TABS = [["forensics","Forensics"],["register","Register"],["kosovo","Kosovo and Metohija"],["abroad","Abroad"]];
+function setTab(t){
+  state.tab=t; document.getElementById("tabs").innerHTML = TABS.map(([k,l])=>`<button class="${k===t?"on":""}" data-t="${k}">${l}</button>`).join("");
+  document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>setTab(b.dataset.t));
+  const c=document.getElementById("content"); c.scrollTop=0; clearHL();
+  const view = t==="kosovo"?"kosovo":t==="abroad"?"abroad":"serbia";
+  if (view!==state.view){ state.view=view; fly(VIEWS[view]); }
+  if (t==="register" && !["reg","chg_oct","ch23","gap","t23"].includes(state.metric)) state.metric = D.units23?"ch23":"reg";
+  if (t==="forensics" && D.has_results && ["reg","chg_oct","ch23","gap","t23"].includes(state.metric)) state.metric="turnout";
+  toolbar();
+  ({forensics:tabForensics, register:tabRegister, kosovo:tabKosovo, abroad:tabAbroad})[t](c);
+  c.insertAdjacentHTML("beforeend", `<div><span id="methodsLink">Methods and sources</span></div>`);
+  document.getElementById("methodsLink").onclick=()=>{ document.getElementById("modalBox").innerHTML=METHODS; document.getElementById("modal").style.display="flex"; };
+  render();
+}
+
+function scopeBox(){
+  return `<div class="row2"><span class="muted">Include:</span>${Object.entries(KIND).map(([k,l])=>`<label><input type="checkbox" data-s="${k}" ${state.scope[k]?"checked":""}> ${l}</label>`).join(" ")}</div>`;
+}
+function bindScope(){ document.querySelectorAll("[data-s]").forEach(cb=>cb.onchange=()=>{ state.scope[cb.dataset.s]=cb.checked; setTab(state.tab); }); }
+
+// ---------------- Forensics
+function tabForensics(c){
+  if (!D.has_results){ c.innerHTML = `<h2>Statistical checks of polling-station results</h2>${NOTE}<p style="margin-top:12px">No results loaded yet. Add RIK files to <code>data/results/</code>. The map and the Register, Kosovo and Abroad tabs already work with the register.</p>`; return; }
+  const R=[]; for(let i=0;i<N;i++) if(T[i]!=null && inScope(i)) R.push(i);
+  const regR=R.reduce((a,i)=>a+S.reg[i],0), votR=R.reduce((a,i)=>a+S.voted[i],0);
+  const ip=D.integer;
+  let h=`<h2>Statistical checks of polling-station results</h2>${NOTE}${scopeBox()}
+  <div class="kpis"><div class="kpi"><b>${fmt(R.length)}</b><span>stations processed (of ${fmt(N)} in scope: ${fmt([...Array(N).keys()].filter(inScope).length)})</span></div><div class="kpi"><b>${pct(votR/regR)}</b><span>turnout, reported stations</span></div><div class="kpi"><b>${D.moran!=null?D.moran.toFixed(2):"n/a"}</b><span>Moran's I of turnout</span></div></div>
+  <p class="muted">Hover over a chart or table row to see the stations on the map. Click a station to zoom to it.</p>
+  <h3>1. Arithmetic consistency of the records</h3><div id="cons"></div>
+  <h3>2. Turnout distribution and round percentages</h3><div id="hist" class="chart"></div><div id="intTxt"></div>
+  <h3>3. Turnout and vote share (election fingerprint)</h3><div class="row2"><span>List:</span><select id="fpParty">${L.map((n,k)=>`<option value="${k}" ${k===state.party?"selected":""}>${esc(n)}</option>`).join("")}</select></div><div id="fp" class="chart" style="height:340px"></div><div id="fpTxt"></div>
+  <h3>4. Turnout and the size of the station</h3><div id="size" class="chart"></div><div id="sizeTxt"></div>
+  <h3>5. Stations compared with their neighbours</h3><div id="nb"></div>
+  <h3>6. Change since the 2023 parliamentary election</h3><div id="c23"></div>`;
+  c.innerHTML=h; bindScope();
+  // 1
+  const cons=(D.consistency||[]).map(([id,chk])=>({i:idIndex[id],chk})).filter(r=>inScope(r.i));
+  document.getElementById("cons").innerHTML = cons.length ? `<p>${cons.length} station-level flags.</p>`+table([["Check",r=>esc(r.chk)],["Municipality",r=>esc(S.unit[r.i])],["Station",r=>S.no[r.i],1],["Name",r=>esc(S.name[r.i])],["Registered",r=>fmt(S.reg[r.i]),1],["Voted",r=>fmt(S.voted[r.i]),1],["Turnout",r=>pct(T[r.i]),1,r=>T[r.i]],["Minutes",r=>S.min26[r.i]?`<a href="${esc(S.min26[r.i])}" target="_blank" onclick="event.stopPropagation()">PDF</a>`:""]], cons, {ids:r=>[r.i], go:r=>r.i})
+    : `<p>No station fails the arithmetic checks that the loaded columns allow (voters vs. registered; valid + invalid vs. ballots in the box; list votes vs. valid ballots; ballots received minus unused vs. voters).</p>`;
+  document.getElementById("cons").insertAdjacentHTML("beforeend", src("results","register"));
+  // 2 histogram with 0.5-point bins
+  const bins={}; R.forEach(i=>{ const b=Math.floor(T[i]*200)/2; (bins[b] ||= {reg:0,ids:[]}); bins[b].reg+=S.reg[i]; bins[b].ids.push(i); });
+  const bx=Object.keys(bins).map(Number).sort((a,b)=>a-b);
+  const hd=document.getElementById("hist");
+  Plotly.newPlot(hd,[{type:"bar",x:bx.map(b=>b+.25),y:bx.map(b=>bins[b].reg),marker:{color:"#2c5d8f"},hovertemplate:"%{x:.1f}% · %{y:,} registered voters<extra></extra>"}],LAY("Turnout (%)","Registered voters",{bargap:0}),PL);
+  bindHover(hd, p=>({ids:bins[bx[p.pointIndex]].ids}));
+  if (ip){ const a=ip["1"], b=ip["5"], out=a.observed>a.hi||b.observed>b.hi;
+    document.getElementById("intTxt").innerHTML = `<p>Of ${fmt(ip.n)} stations with at least 100 registered voters, <b>${a.observed}</b> have a turnout that is an exact whole percentage. About <b>${a.expected.toFixed(0)}</b> would be expected from ordinary random variation (95% range ${a.lo.toFixed(0)}–${a.hi.toFixed(0)}). For multiples of 5%: <b>${b.observed}</b> observed, <b>${b.expected.toFixed(0)}</b> expected (${b.lo.toFixed(0)}–${b.hi.toFixed(0)}). `+
+      (out?`The observed count is <b>above</b> the expected range. This pattern has been associated with results being written to a target rather than counted (Kobak et al. 2016), so the individual stations are worth checking.`:`The observed counts are <b>within</b> the range expected from random variation.`)+
+      ` <a href="#" id="intShow">Show these stations on the map</a></p><div class="cap">Expected range from 2,000 simulations in which each station's count varies binomially around its own turnout (Kobak, Shpilkin & Pshenichnikov 2016). Hover a bar to see its stations.</div>`;
+    document.getElementById("intShow").onclick=e=>{ e.preventDefault(); const ids=R.filter(i=>S.reg[i]>=100 && (100*S.voted[i])%S.reg[i]===0); setHL(ids,[]); };
+  }
+  // 3 fingerprint
+  const drawFP=()=>{ const k=state.party, n=100, z=Array.from({length:n},()=>new Array(n).fill(0)), mem={};
+    let sx=0,sy=0,sxx=0,syy=0,sxy=0,m=0,hh=[];
+    R.forEach(i=>{ const s=SH[k][i]; if(s==null) return; const x=Math.min(99,Math.floor(T[i]*100)), y=Math.min(99,Math.floor(s*100)); z[y][x]+=S.votes[k][i]; (mem[y*1000+x] ||= []).push(i);
+      sx+=T[i];sy+=s;sxx+=T[i]*T[i];syy+=s*s;sxy+=T[i]*s;m++; if(T[i]>.8&&s>.8) hh.push(i); });
+    const zl=z.map(r=>r.map(v=>v?Math.log10(v+1):null));
+    const fd=document.getElementById("fp");
+    Plotly.newPlot(fd,[{type:"heatmap",z:zl,x:[...Array(n).keys()].map(v=>v+.5),y:[...Array(n).keys()].map(v=>v+.5),colorscale:[[0,"#dbe8f5"],[.5,"#4a8cc7"],[1,"#08306b"]],showscale:false,
+      customdata:z,hovertemplate:"Turnout %{x:.0f}% · share %{y:.0f}%<br>%{customdata:,} votes<extra></extra>"}],LAY("Turnout (%)","Share of "+L[k]+" (%)",{xaxis:{title:{text:"Turnout (%)"},range:[0,100]},yaxis:{title:{text:"Share (%)"},range:[0,100]}}),PL);
+    bindHover(fd, p=>({ids:mem[Math.floor(p.y)*1000+Math.floor(p.x)]||[]}));
+    const corr=(m*sxy-sx*sy)/Math.sqrt((m*sxx-sx*sx)*(m*syy-sy*sy));
+    document.getElementById("fpTxt").innerHTML=`<p>Correlation between turnout and the share of ${esc(L[k])} across stations: <b>${sgn(corr,2)}</b>. <b>${hh.length}</b> stations (${fmt(hh.reduce((a,i)=>a+S.reg[i],0))} registered voters) have both turnout and share above 80%. <a href="#" id="hhShow">Show them on the map</a></p>
+      <div class="cap">Votes for the list by 1-point bins of turnout and share (log colour scale). In most elections the cloud is one compact cluster. A smear or a second cluster towards the top-right corner is the pattern Klimek et al. (2012) describe; it can also come from real regional differences. Hover a cell to see its stations.</div>`;
+    document.getElementById("hhShow").onclick=e=>{e.preventDefault(); setHL(hh,[]);};
+  };
+  if (L.length){ drawFP(); document.getElementById("fpParty").onchange=e=>{ state.party=+e.target.value; drawFP(); }; } else document.getElementById("fp").outerHTML="<p>Needs list-level results.</p>";
+  // 4 size
+  const sd=document.getElementById("size");
+  Plotly.newPlot(sd,[{type:"scattergl",mode:"markers",x:R.map(i=>S.reg[i]),y:R.map(i=>T[i]*100),customdata:R,marker:{size:4,color:R.map(i=>({domestic:"#2c5d8f",kosovo:"#c2410c",abroad:"#16a34a",prison:"#7c3aed"})[S.kind[i]]),opacity:.5},
+    hovertemplate:"%{customdata}<extra></extra>", text:R.map(i=>S.unit[i]+" · "+S.no[i])}],LAY("Registered voters (log)","Turnout (%)",{xaxis:{type:"log",title:{text:"Registered voters (log)"}}}),PL);
+  sd.data[0].hovertemplate="%{text}<br>%{x:,} registered · %{y:.1f}%<extra></extra>"; Plotly.redraw(sd);
+  bindHover(sd, p=>({ids:[R[p.pointIndex]]}));
+  const med=a=>quant(a,.5), small=R.filter(i=>S.reg[i]<200), large=R.filter(i=>S.reg[i]>=200);
+  document.getElementById("sizeTxt").innerHTML=`<p>Stations under 200 voters: ${fmt(small.length)}, median turnout ${pct(med(small.map(i=>T[i])))}; all others: ${pct(med(large.map(i=>T[i])))}. Colours: Serbia, <span style="color:#c2410c">Kosovo units</span>, <span style="color:#16a34a">abroad</span>, <span style="color:#7c3aed">prisons</span>. Small rural stations usually have older registers with more absent voters.</p>`;
+  // 5 neighbours
+  const out=R.filter(i=>S.nz[i]!=null&&Math.abs(S.nz[i])>=3).sort((a,b)=>Math.abs(S.nz[b])-Math.abs(S.nz[a]));
+  document.getElementById("nb").innerHTML=`<p>Each domestic station's turnout is compared with the median of its 8 nearest stations. <b>${out.length}</b> stations differ by 3 or more robust standard deviations. <a href="#" id="nbMap">Colour the map by this deviation</a></p>`+
+    table([["Municipality",i=>esc(S.unit[i]),0,i=>S.unit[i]],["Station",i=>S.no[i],1,i=>S.no[i]],["Name",i=>esc(S.name[i])],["Registered",i=>fmt(S.reg[i]),1,i=>S.reg[i]],["Turnout",i=>pct(T[i]),1,i=>T[i]],["Neighbours' median",i=>pct(S.nmed[i]),1,i=>S.nmed[i]],["Deviation (SD)",i=>sgn(S.nz[i],1),1,i=>S.nz[i]],["Avg. distance (km)",i=>S.nkm[i]?.toFixed(1),1,i=>S.nkm[i]],["Minutes",i=>S.min26[i]?`<a href="${esc(S.min26[i])}" target="_blank" onclick="event.stopPropagation()">PDF</a>`:""]], out, {ids:i=>[i], go:i=>i})+
+    `<div class="cap">Local Moran's I with k = 8 nearest-neighbour weights and 999 permutations (Anselin 1995); deviation = (turnout − neighbours' median) / (1.4826 × MAD). Only domestic stations with settlement-level or better coordinates. In sparse areas neighbours can be far apart (see distance).</div>`+src("results","geocode");
+  document.getElementById("nbMap").onclick=e=>{e.preventDefault(); state.metric="nz"; toolbar(); render();};
+  // 6 2023
+  const C=R.filter(i=>TCH[i]!=null && S.kind[i]==="domestic");
+  const el=document.getElementById("c23");
+  if (C.length>50){
+    const ch=C.map(i=>TCH[i]), m=quant(ch,.5), mad=quant(ch.map(v=>Math.abs(v-m)),.5)*1.4826;
+    const o=C.filter(i=>Math.abs((TCH[i]-m)/mad)>=3).sort((a,b)=>Math.abs(TCH[b]-m)-Math.abs(TCH[a]-m));
+    el.innerHTML=`<div id="sc23" class="chart" style="height:300px"></div><p>${fmt(C.length)} domestic stations matched to 2023. Median change in turnout <b>${sgn(m,1," points")}</b>; <b>${o.length}</b> stations moved 3 or more robust SD from that median. <a href="#" id="tchMap">Colour the map by change</a></p>`+
+      table([["Municipality",i=>esc(S.unit[i]),0,i=>S.unit[i]],["Station",i=>S.no[i],1],["Name",i=>esc(S.name[i])],["Registered 2023",i=>fmt(S.reg23[i]),1,i=>S.reg23[i]],["Registered 2026",i=>fmt(S.reg[i]),1,i=>S.reg[i]],["Turnout 2023",i=>pct(S.t23[i]),1,i=>S.t23[i]],["Turnout 2026",i=>pct(T[i]),1,i=>T[i]],["Change (pp)",i=>sgn(TCH[i],1),1,i=>TCH[i]],["Minutes 2026",i=>S.min26[i]?`<a href="${esc(S.min26[i])}" target="_blank" onclick="event.stopPropagation()">PDF</a>`:""],["Minutes 2023",i=>S.min23[i]?`<a href="${esc(S.min23[i])}" target="_blank" onclick="event.stopPropagation()">PDF</a>`:""]], o, {ids:i=>[i], go:i=>i})+
+      `<div class="cap">Stations matched by number and name within the same municipality (or by a unique identical name). A large change can reflect a redrawn station area, a new station nearby or a register change.</div>`+src("results","baseline");
+    const d=document.getElementById("sc23");
+    Plotly.newPlot(d,[{type:"scattergl",mode:"markers",x:C.map(i=>S.t23[i]*100),y:C.map(i=>T[i]*100),text:C.map(i=>S.unit[i]+" · "+S.no[i]),marker:{size:4,color:"#2c5d8f",opacity:.45},hovertemplate:"%{text}<br>2023 %{x:.1f}% → 2026 %{y:.1f}%<extra></extra>"},
+      {type:"scatter",mode:"lines",x:[0,100],y:[0,100],line:{dash:"dot",color:"#999"},hoverinfo:"skip"}],LAY("Turnout 2023 (%)","Turnout 2026 (%)"),PL);
+    bindHover(d,p=>p.curveNumber===0?{ids:[C[p.pointIndex]]}:null);
+    document.getElementById("tchMap").onclick=e=>{e.preventDefault(); state.metric="tch"; toolbar(); render();};
+  } else el.innerHTML="<p>Needs the 2023 baseline in data/baseline/.</p>";
+}
+
+// ---------------- Register
+function tabRegister(c){
+  const tot=S.reg.reduce((a,b)=>a+b,0), totA=S.reg_a1.reduce((a,b)=>a+b,0);
+  const dom=[];for(let i=0;i<N;i++) if(S.kind[i]==="domestic") dom.push(i);
+  let h=`<h2>The register by polling station</h2>
+  <div class="kpis"><div class="kpi"><b>${fmt(tot)}</b><span>voters (RIK, 23 Oct)</span></div><div class="kpi"><b>${fmt(N)}</b><span>polling stations</span></div><div class="kpi"><b>${fmt(quant(dom.map(i=>S.reg[i]),.5))}</b><span>median voters per station (Serbia)</span></div><div class="kpi"><b>${fmt(dom.filter(i=>S.reg[i]<100).length)}</b><span>stations under 100 voters</span></div></div>
+  <p class="muted">Hover a row to see the stations or municipality on the map; click to zoom.</p>
+  <h3>Changes between 9 and 23 October</h3><div id="oct"></div>
+  <h3>Compared with the 2023 parliamentary election</h3><div id="r23"></div>
+  <h3>Register gap by municipality (earlier analysis)</h3><div id="gapT"></div>
+  <h3>Largest stations</h3><div id="big"></div>`;
+  c.innerHTML=h;
+  // Oct changes by unit
+  const byU={}; for(let i=0;i<N;i++){ const d=S.reg[i]-S.reg_a1[i]; if(d){ const o=(byU[S.unit[i]] ||= {unit:S.unit[i],kind:S.kind[i],n:0,d:0,ids:[]}); o.n++; o.d+=d; o.ids.push(i);} }
+  const U=Object.values(byU).sort((a,b)=>b.d-a.d), nch=U.reduce((a,u)=>a+u.n,0);
+  document.getElementById("oct").innerHTML=`<p>The closed register of 9 October had <b>${fmt(totA)}</b> voters; RIK's final number of 23 October is <b>${fmt(tot)}</b> (${sgn(tot-totA,0)}). ${fmt(nch)} stations changed, most by one or two voters. <a href="#" id="octMap">Colour the map by this change</a></p>`+
+    table([["Municipality",u=>esc(u.unit),0,u=>u.unit],["Type",u=>KIND[u.kind]],["Stations changed",u=>u.n,1,u=>u.n],["Net change",u=>sgn(u.d,0),1,u=>u.d]],U,{ids:u=>u.ids, lsg:u=>[S.lsg[u.ids[0]]].filter(Boolean), click:u=>{ const i=u.ids[0]; fly({longitude:S.lon[i],latitude:S.lat[i],zoom:9.5}); }, h:240})+
+    `<div class="cap">Changes made after the register is closed are reflected in RIK's decision on the final number of voters (Article 20 of the Law on the Unified Voter Register).</div>`+src("register");
+  document.getElementById("octMap").onclick=e=>{e.preventDefault(); state.metric="chg_oct"; state.level="stations"; toolbar(); render();};
+  // 2023
+  const r23=document.getElementById("r23");
+  if (D.units23){
+    const U3=D.units23.map(u=>({...u, ch:u.reg23?u.reg26-u.reg23:null, rel:u.reg23?u.reg26/u.reg23-1:null, t23:u.reg23?u.v23/u.reg23:null}));
+    const byK={}; U3.forEach(u=>{const o=(byK[u.kind] ||= {r23:0,r26:0}); o.r23+=u.reg23||0; o.r26+=u.reg26||0;});
+    const M3=[];for(let i=0;i<N;i++) if(S.reg23[i]!=null&&S.reg23[i]>=100) M3.push(i);
+    M3.sort((a,b)=>CH23[b]-CH23[a]);
+    r23.innerHTML=`<p>${Object.entries(byK).map(([k,o])=>`${KIND[k]}: ${fmt(o.r23)} → ${fmt(o.r26)} (<b>${sgn(o.r26-o.r23,0)}</b>)`).join("; ")}. <a href="#" id="c23Map">Colour the map by change</a></p>`+
+      `<p><b>By municipality</b></p>`+table([["Municipality",u=>esc(u.unit),0,u=>u.unit],["Type",u=>KIND[u.kind]],["Stations 2023",u=>u.st23??"n/a",1,u=>u.st23],["Stations 2026",u=>u.st26,1,u=>u.st26],["Registered 2023",u=>fmt(u.reg23),1,u=>u.reg23],["Registered 2026",u=>fmt(u.reg26),1,u=>u.reg26],["Change",u=>sgn(u.ch??NaN,0),1,u=>u.ch],["Change (%)",u=>sgn((u.rel??NaN)*100,1,"%"),1,u=>u.rel],["Turnout 2023",u=>pct(u.t23),1,u=>u.t23]],
+        U3.sort((a,b)=>(b.rel??-9)-(a.rel??-9)),{ids:u=>idxByUnit[u.unit]||[], lsg:u=>u.lsg?[u.lsg]:[], click:u=>{const ids=idxByUnit[u.unit]||[]; const i=ids.find(j=>S.lat[j]!=null); if(i!=null){ if(S.kind[i]==="abroad") setTab("abroad"); else fly({longitude:S.lon[i],latitude:S.lat[i],zoom:9.5}); }}, h:260})+
+      `<p style="margin-top:10px"><b>By polling station:</b> ${fmt(S.reg23.filter(x=>x!=null).length)} of ${fmt(N)} stations matched to a 2023 station. Largest relative increases (at least 100 voters in 2023):</p>`+
+      table([["Municipality",i=>esc(S.unit[i]),0,i=>S.unit[i]],["Station",i=>S.no[i],1],["Name 2026",i=>esc(S.name[i])],["Registered 2023",i=>fmt(S.reg23[i]),1,i=>S.reg23[i]],["Registered 2026",i=>fmt(S.reg[i]),1,i=>S.reg[i]],["Change (%)",i=>sgn(CH23[i]*100,1,"%"),1,i=>CH23[i]],["2023 minutes",i=>S.min23[i]?`<a href="${esc(S.min23[i])}" target="_blank" onclick="event.stopPropagation()">PDF</a>`:""]],M3.slice(0,150),{ids:i=>[i],go:i=>i})+
+      `<div class="cap">A large increase at one station often means its area was redrawn or stations were merged; check the street lists and neighbouring stations first.</div>`+src("register","baseline");
+    document.getElementById("c23Map").onclick=e=>{e.preventDefault(); state.metric="ch23"; toolbar(); render();};
+  } else r23.innerHTML="<p>Add the 2023 polling-station results to data/baseline/.</p>";
+  // gap
+  const G=[...D.gap].sort((a,b)=>b.unexplained_gap_rel-a.unexplained_gap_rel);
+  document.getElementById("gapT").innerHTML=`<p>Registered voters above the projection of eligible residents and citizens abroad. <a href="#" id="gapMap">Show on the map</a></p>`+
+    table([["Municipality",g=>esc(g.lsg),0,g=>g.lsg],["Register (5 Oct)",g=>fmt(g.uvr_2026_10_05),1,g=>g.uvr_2026_10_05],["Projected eligible",g=>fmt(g.projected_eligible),1,g=>g.projected_eligible],["Unexplained gap",g=>fmt(g.unexplained_gap),1,g=>g.unexplained_gap],["Gap (%)",g=>pct(g.unexplained_gap_rel),1,g=>g.unexplained_gap_rel]],G,{lsg:g=>[g.lsg],click:g=>{const ids=idxByLsg[g.lsg]||[]; if(ids.length) fly({longitude:S.lon[ids[0]],latitude:S.lat[ids[0]],zoom:9});},h:240})+src("gap");
+  document.getElementById("gapMap").onclick=e=>{e.preventDefault(); state.metric="gap"; toolbar(); render();};
+  const B=[...Array(N).keys()].sort((a,b)=>S.reg[b]-S.reg[a]).slice(0,40);
+  document.getElementById("big").innerHTML=table([["Municipality",i=>esc(S.unit[i])],["Station",i=>S.no[i],1],["Name",i=>esc(S.name[i])],["Address",i=>esc(S.addr[i])],["Registered",i=>fmt(S.reg[i]),1,i=>S.reg[i]],["Type",i=>KIND[S.kind[i]]]],B,{ids:i=>[i],go:i=>i,h:240})+src("register");
+}
+
+// ---------------- Kosovo
+function tabKosovo(c){
+  const K=Object.entries(kosStats).map(([u,r])=>({unit:u,...r,hosts:[...r.hosts].join(", ")}));
+  const u23={}; (D.units23||[]).forEach(u=>{ if(u.kind==="kosovo") u23[u.unit]=u; });
+  const tot=K.reduce((a,k)=>a+k.reg,0), tot23=Object.values(u23).reduce((a,u)=>a+(u.reg23||0),0), v23=Object.values(u23).reduce((a,u)=>a+(u.v23||0),0);
+  const anyT=K.some(k=>k.voted);
+  c.innerHTML=`<h2>Voters registered in Kosovo and Metohija</h2>
+  <p>RIK's final number lists <b>${fmt(tot)}</b> voters in <b>${K.length}</b> Kosovo and Metohija municipalities, at <b>${K.reduce((a,k)=>a+k.n,0)}</b> polling stations. According to the station addresses, all of them are located outside Kosovo and Metohija, in ${Object.keys(hostPos).sort().join(", ")}. The map shows each municipality and where its voters vote.</p>
+  ${D.units23?`<p>In the 2023 parliamentary election: <b>${fmt(tot23)}</b> registered voters, turnout ${pct(v23/tot23)}. Change to now: <b>${sgn(tot-tot23,0)}</b>.</p>`:""}
+  <h3>Where they vote</h3><div id="hostT"></div><h3>By municipality</h3><div id="unitT"></div><h3>The register over time</h3><div id="ser" class="chart"></div>
+  <div class="cap">Closed register at each election; earlier values are partly rounded or derived (see the Kosovo report). 2026: RIK final number.</div>`+src("register","kim_series","boundaries");
+  const H=Object.values(hostPos).sort((a,b)=>b.reg-a.reg);
+  document.getElementById("hostT").innerHTML=table([["Votes in",h=>esc(h.name)],["Stations",h=>h.k,1],["Registered",h=>fmt(h.reg),1,h=>h.reg],["Municipalities",h=>esc(h.units)]],H,{ids:h=>{const o=[];for(let i=0;i<N;i++)if(S.kind[i]==="kosovo"&&S.host[i]===h.name)o.push(i);return o;},click:h=>fly({longitude:h.lon,latitude:h.lat,zoom:11}),h:200});
+  document.getElementById("unitT").innerHTML=table([["Municipality",k=>esc(k.unit),0,k=>k.unit],["Stations",k=>k.n,1,k=>k.n],["Registered",k=>fmt(k.reg),1,k=>k.reg],["Registered 2023",k=>fmt(u23[k.unit]?.reg23),1,k=>u23[k.unit]?.reg23],["Change",k=>u23[k.unit]?sgn(k.reg-u23[k.unit].reg23,0):"n/a",1,k=>u23[k.unit]?k.reg-u23[k.unit].reg23:null],["Turnout 2023",k=>u23[k.unit]?.reg23?pct(u23[k.unit].v23/u23[k.unit].reg23):"n/a",1],["Turnout",k=>k.voted?pct(k.voted/k.reg):"n/a",1,k=>k.voted/k.reg],...TOP3.map(q=>[esc(L[q]),k=>pct(shareOf(q,k.ids)),1,k=>shareOf(q,k.ids)]),["Votes in",k=>esc(k.hosts)]],
+    K.sort((a,b)=>b.reg-a.reg),{ids:k=>k.ids,click:k=>{ state.hlKos=k.unit; render(); }, h:330});
+  // hover rows also outline municipality
+  setTimeout(()=>document.querySelectorAll("#unitT tr.row").forEach((tr,j)=>{ const k=K[+tr.dataset.r]; tr.addEventListener("mouseenter",()=>{state.hlKos=k.unit;render();}); tr.addEventListener("mouseleave",()=>{state.hlKos=null;render();}); }),5);
+  const ser=[...D.kim_series.filter(s=>/Parliamentary|Presidential/.test(s.election)), {date:"2026-10-23",registered_voters:tot,election:"RIK final number"}];
+  Plotly.newPlot("ser",[{type:"scatter",mode:"lines+markers",x:ser.map(s=>s.date),y:ser.map(s=>s.registered_voters),line:{color:"#2c5d8f"},hovertemplate:"%{x}<br>%{y:,}<extra></extra>"}],LAY("","Registered voters",{yaxis:{rangemode:"tozero",title:{text:"Registered voters"}}}),PL);
+}
+function markKosRow(n){ document.querySelectorAll("#unitT tr.row").forEach(tr=>{ tr.style.background = tr.cells[0].textContent===n ? "#fff4ec" : ""; }); }
+
+// ---------------- Abroad
+function tabAbroad(c){
+  const A=[];for(let i=0;i<N;i++) if(S.kind[i]==="abroad") A.push(i);
+  const byC={}; A.forEach(i=>{ const o=(byC[S.country[i]] ||= {country:S.country[i],ids:[],reg:0,voted:0}); o.ids.push(i); o.reg+=S.reg[i]; if(S.voted[i]!=null) o.voted+=S.voted[i]; });
+  const C=Object.values(byC).sort((a,b)=>b.reg-a.reg), tot=A.reduce((a,i)=>a+S.reg[i],0), bih=byC["Bosnia and Herzegovina"];
+  const u=(D.units23||[]).find(x=>x.kind==="abroad");
+  const anyT=A.some(i=>S.voted[i]!=null);
+  let rows=[]; C.forEach(o=>{ rows.push({g:o}); o.ids.sort((a,b)=>S.city[a].localeCompare(S.city[b])||S.no[a]-S.no[b]).forEach(i=>rows.push({i})); });
+  c.innerHTML=`<h2>Polling stations abroad</h2>
+  <div class="kpis"><div class="kpi"><b>${fmt(tot)}</b><span>registered voters</span></div><div class="kpi"><b>${A.length}</b><span>stations</span></div><div class="kpi"><b>${C.length}</b><span>countries</span></div>${bih?`<div class="kpi"><b>${fmt(bih.reg)}</b><span>in Bosnia and Herzegovina (${pct(bih.reg/tot)})</span></div>`:""}</div>
+  ${u?`<p>In 2023: ${fmt(u.reg23)} voters at ${u.st23} stations abroad, turnout ${pct(u.v23/u.reg23)}. Now: ${fmt(u.reg26)} at ${u.st26} stations (<b>${sgn((u.reg26/u.reg23-1)*100,0,"%")}</b>).</p>`:""}
+  <p class="muted">Click a station or a country to show it on the map.</p><div id="abT"></div>
+  <div class="cap">Voters abroad register for each election; these numbers are applications for this election, not the size of the diaspora. Markers are at city centres.</div>`+src("register","abroad_geo");
+  const el=document.getElementById("abT");
+  el.innerHTML=`<div class="tblwrap" style="max-height:calc(100vh - 330px);min-height:260px"><table class="tbl"><thead><tr><th>Country / city</th><th>Station</th><th class="n">Registered</th>${anyT?'<th class="n">Turnout</th>'+TOP3.map(q=>`<th class="n">${esc(L[q])}</th>`).join(""):""}</tr></thead><tbody>`+
+    rows.map((r,k)=>r.g?`<tr class="grp row" data-k="${k}"><td>${esc(r.g.country)}</td><td>${r.g.ids.length} station(s)</td><td class="n">${fmt(r.g.reg)}</td>${anyT?`<td class="n">${r.g.voted?pct(r.g.voted/r.g.reg):"n/a"}</td>`+TOP3.map(q=>`<td class="n">${pct(shareOf(q,r.g.ids))}</td>`).join(""):""}</tr>`
+      :`<tr class="row" data-k="${k}"><td style="padding-left:16px">${esc(S.city[r.i])}</td><td>${S.no[r.i]} · ${esc(S.name[r.i])}</td><td class="n">${fmt(S.reg[r.i])}</td>${anyT?`<td class="n">${pct(T[r.i])}</td>`+TOP3.map(q=>`<td class="n">${pct(SH[q][r.i])}</td>`).join(""):""}</tr>`).join("")+`</tbody></table></div>`;
+  el.querySelectorAll("tr.row").forEach(tr=>{ const r=rows[+tr.dataset.k];
+    tr.onmouseenter=()=>{ setHL(r.g?r.g.ids:[r.i],[]); };
+    tr.onmouseleave=()=>clearHL();
+    tr.onclick=()=>{ if(r.g){ const la=r.g.ids.map(i=>S.lat[i]), lo=r.g.ids.map(i=>S.lon[i]); const span=Math.max(Math.max(...la)-Math.min(...la),Math.max(...lo)-Math.min(...lo));
+        fly({latitude:(Math.max(...la)+Math.min(...la))/2, longitude:(Math.max(...lo)+Math.min(...lo))/2, zoom: span<.5?7:span<3?6:span<10?4.5:3}); }
+      else { fly({longitude:S.lon[r.i],latitude:S.lat[r.i],zoom:7.5}); showCard(r.i); } }; });
+}
+function markAbroad(city){ document.querySelectorAll("#abT tr.row").forEach(tr=>{ tr.style.background = tr.cells[0].textContent===city ? "#fff4ec":""; if(tr.cells[0].textContent===city) tr.scrollIntoView({block:"nearest"}); }); }
+
+// ---------------- Stations
+function tabStations(c){
+  const units=[...new Set(S.unit)].sort();
+  c.innerHTML=`<h2>Find a polling station</h2><div class="row2"><select id="fu"><option value="">All municipalities</option>${units.map(u=>`<option>${esc(u)}</option>`).join("")}</select><input type="text" id="fq" placeholder="Name or address" style="flex:1;min-width:160px"></div><div id="fr"></div>`;
+  const run=()=>{ const u=document.getElementById("fu").value, q=document.getElementById("fq").value.toLowerCase();
+    const out=[]; for(let i=0;i<N&&out.length<400;i++){ if(u&&S.unit[i]!==u) continue; if(q&&!(S.name[i].toLowerCase().includes(q)||S.addr[i].toLowerCase().includes(q))) continue; out.push(i); }
+    document.getElementById("fr").innerHTML=`<p class="muted">${out.length>=400?"First 400 matches":out.length+" stations"}. Click to zoom.</p>`+
+      table([["Municipality",i=>esc(S.unit[i]),0,i=>S.unit[i]],["Station",i=>S.no[i],1,i=>S.no[i]],["Name",i=>esc(S.name[i])],["Address",i=>esc(S.addr[i])],["Registered",i=>fmt(S.reg[i]),1,i=>S.reg[i]],["Turnout",i=>pct(T[i]),1,i=>T[i]],["Location",i=>`<span class="pill">${PREC[S.prec[i]]||""}</span>`]],out,{ids:i=>[i],go:i=>i,h:Math.max(260, window.innerHeight-230)})+src("register","geocode"); };
+  document.getElementById("fu").onchange=run; document.getElementById("fq").oninput=()=>{clearTimeout(window._q);window._q=setTimeout(run,200);}; run();
+}
+
+toolbar(); setTab("forensics");
+</script>
+</body>
+</html>

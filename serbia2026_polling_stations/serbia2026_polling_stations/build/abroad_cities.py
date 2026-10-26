@@ -1,0 +1,46 @@
+# Approximate city-centre coordinates for polling stations abroad (station no. -> city, country, lat, lon).
+# Locations are city level, not the building; source of station list: Ministry decision Annex 1 (code 198).
+C = {
+ "Melbourne":("Australia",-37.81,144.96),"Sydney":("Australia",-33.87,151.21),"Vienna":("Austria",48.21,16.37),
+ "Salzburg":("Austria",47.81,13.04),"Linz":("Austria",48.31,14.29),"Brussels":("Belgium",50.85,4.35),
+ "Sarajevo":("Bosnia and Herzegovina",43.86,18.41),"Banja Luka":("Bosnia and Herzegovina",44.77,17.19),
+ "Mostar":("Bosnia and Herzegovina",43.34,17.81),"Drvar":("Bosnia and Herzegovina",44.37,16.38),
+ "Trebinje":("Bosnia and Herzegovina",42.71,18.34),"Branjevo":("Bosnia and Herzegovina",44.52,19.11),
+ "Bijeljina":("Bosnia and Herzegovina",44.76,19.21),"Bratunac":("Bosnia and Herzegovina",44.18,19.33),
+ "Višegrad":("Bosnia and Herzegovina",43.78,19.29),"Doboj":("Bosnia and Herzegovina",44.73,18.09),
+ "Zvornik":("Bosnia and Herzegovina",44.39,19.10),"Lopare":("Bosnia and Herzegovina",44.64,18.85),
+ "Prijedor":("Bosnia and Herzegovina",44.98,16.71),"Rudo":("Bosnia and Herzegovina",43.62,19.37),
+ "Mrkonjić Grad":("Bosnia and Herzegovina",44.42,17.08),"Pale":("Bosnia and Herzegovina",43.82,18.57),
+ "Vlasenica":("Bosnia and Herzegovina",44.18,18.94),"Sokolac":("Bosnia and Herzegovina",43.94,18.80),
+ "Foča":("Bosnia and Herzegovina",43.51,18.78),"Rogatica":("Bosnia and Herzegovina",43.80,19.00),
+ "Modriča":("Bosnia and Herzegovina",44.95,18.30),"Gradiška":("Bosnia and Herzegovina",45.14,17.25),
+ "Ugljevik":("Bosnia and Herzegovina",44.69,18.99),"Brčko":("Bosnia and Herzegovina",44.87,18.81),
+ "Novo Goražde":("Bosnia and Herzegovina",43.67,18.96),"Brasília":("Brazil",-15.79,-47.88),
+ "Athens":("Greece",37.98,23.73),"Copenhagen":("Denmark",55.68,12.57),"Jakarta":("Indonesia",-6.21,106.85),
+ "Dublin":("Ireland",53.35,-6.26),"Rome":("Italy",41.90,12.50),"Milan":("Italy",45.46,9.19),
+ "Trieste":("Italy",45.65,13.78),"Tokyo":("Japan",35.68,139.69),"Pretoria":("South Africa",-25.75,28.19),
+ "Ottawa":("Canada",45.42,-75.70),"Toronto":("Canada",43.65,-79.38),"Beijing":("China",39.90,116.41),
+ "Nicosia":("Cyprus",35.17,33.36),"Luxembourg":("Luxembourg",49.61,6.13),"Floriana":("Malta",35.89,14.51),
+ "Budapest":("Hungary",47.50,19.04),"Berlin":("Germany",52.52,13.40),"Düsseldorf":("Germany",51.23,6.77),
+ "Munich":("Germany",48.14,11.58),"Stuttgart":("Germany",48.78,9.18),"Frankfurt":("Germany",50.11,8.68),
+ "Hamburg":("Germany",53.55,9.99),"Auckland":("New Zealand",-36.85,174.76),"Oslo":("Norway",59.91,10.75),
+ "Warsaw":("Poland",52.23,21.01),"Lisbon":("Portugal",38.72,-9.14),"Moscow":("Russia",55.76,37.62),
+ "Sochi":("Russia",43.60,39.73),"Skopje":("North Macedonia",42.00,21.43),"Kumanovo":("North Macedonia",42.13,21.71),
+ "Washington":("United States",38.91,-77.04),"Chicago":("United States",41.88,-87.63),"New York":("United States",40.71,-74.01),
+ "Los Angeles":("United States",34.02,-118.49),"Ljubljana":("Slovenia",46.06,14.51),"London":("United Kingdom",51.51,-0.13),
+ "Helsinki":("Finland",60.17,24.94),"Paris":("France",48.86,2.35),"Strasbourg":("France",48.57,7.75),
+ "The Hague":("Netherlands",52.08,4.30),"Zagreb":("Croatia",45.81,15.98),"Vukovar":("Croatia",45.35,19.00),
+ "Podgorica":("Montenegro",42.44,19.26),"Sutomore":("Montenegro",42.14,19.05),"Berane":("Montenegro",42.84,19.87),
+ "Prague":("Czechia",50.08,14.44),"Bern":("Switzerland",46.95,7.45),"Zurich":("Switzerland",47.38,8.54),
+ "Stockholm":("Sweden",59.33,18.07),"Malmö":("Sweden",55.60,13.00),"Madrid":("Spain",40.42,-3.70),
+}
+ORDER = ["Melbourne","Sydney","Vienna","Vienna","Vienna","Vienna","Salzburg","Linz","Brussels","Sarajevo","Banja Luka","Banja Luka","Banja Luka",
+ "Mostar","Drvar","Trebinje","Branjevo","Bijeljina","Bijeljina","Bratunac","Višegrad","Doboj","Zvornik","Lopare","Prijedor","Rudo","Mrkonjić Grad",
+ "Pale","Vlasenica","Sokolac","Foča","Rogatica","Modriča","Gradiška","Ugljevik","Brčko","Novo Goražde","Brasília","Athens","Copenhagen","Jakarta",
+ "Dublin","Rome","Milan","Trieste","Tokyo","Pretoria","Ottawa","Toronto","Beijing","Nicosia","Luxembourg","Floriana","Budapest","Berlin","Düsseldorf",
+ "Munich","Munich","Stuttgart","Frankfurt","Frankfurt","Hamburg","Auckland","Oslo","Warsaw","Lisbon","Moscow","Sochi","Skopje","Kumanovo","Washington",
+ "Chicago","New York","Los Angeles","Ljubljana","Ljubljana","London","Helsinki","Paris","Strasbourg","The Hague","Zagreb","Vukovar","Podgorica",
+ "Sutomore","Berane","Prague","Bern","Zurich","Stockholm","Malmö","Madrid","Madrid"]
+assert len(ORDER) == 93
+def station(n):
+    city = ORDER[n-1]; country, lat, lon = C[city]; return city, country, lat, lon

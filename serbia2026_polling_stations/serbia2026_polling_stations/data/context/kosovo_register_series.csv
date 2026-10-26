@@ -1,0 +1,9 @@
+﻿election,date,registered_voters,voted,status,source
+Parliamentary,2014-03-16,109000,37518,rounded; voted = 34.42%,OSCE via RFE
+Parliamentary,2016-04-24,106818,47000,"derived: 47,000 / 0.44",OSCE via RFE
+Presidential,2017-04-02,105929,,exact,OSCE via N1
+Parliamentary,2020-06-21,95330,51011,"derived: 51,011 / 0.5351",OSCE via Novosti
+Parliamentary/presidential,2022-04-03,93500,,rounded,RFE
+Parliamentary,2023-12-17,94161,23878,exact,RIK via KoSSev/N1
+UVR snapshot,2023-10-23,122300,,"snapshot, not closed",RFE
+UVR snapshot,2026-10,115432,,"snapshot, not closed",Ministry of State Administration
